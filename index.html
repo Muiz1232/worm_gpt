@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Worm Gpt Chat API</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.3/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="gpt.css">
+</head>
+<body>
+<div class="container">
+  <h1>This is Worm GPT api</h1>
+  <p>Join Our telegram channel for more </p>
+        <a href="https://t.me/payouts33" class="button">Join Now</a>
+</div>
+  <script>
+    const chatId = new URLSearchParams(window.location.search).get("id");
+    const message = new URLSearchParams(window.location.search).get("text");
+    const telegramBotToken = new URLSearchParams(window.location.search).get("bot");
+    const prompt = `Hi`;
+
+    let receiving = false;
+    let collectedResponse = [];
+
+    function applyMarkdownSyntax(text) {
+      // Replace bold syntax
+      text = text.replace(/\*\*(.*?)\*\*/g, '<span class="bold">$1</span>');
+
+      // Replace code block syntax
+      text = text.replace(/```(.*?)```/g, '<div class="code">$1</div>');
+
+      return text;
+    }
+
+    function connectWebSocket(message) {
+      receiving = true;
+      const url = "wss://backend.buildpicoapps.com/api/chatbot/chat";
+      const websocket = new WebSocket(url);
+
+      websocket.addEventListener("open", () => {
+        websocket.send(
+          JSON.stringify({
+            chatId: chatId,
+            appId: "large-positive",
+            systemPrompt: prompt,
+            message: message,
+          })
+        );
+      });
+
+      websocket.onmessage = (event) => {
+        const response = applyMarkdownSyntax(event.data);
+        collectedResponse.push(response);
+      };
+
+      websocket.onclose = (event) => {
+        if (event.code === 1000) {
+          receiving = false;
+          sendToTelegram(collectedResponse.join(''));
+          collectedResponse = [];
+        } else {
+          const errorMessage = "Error getting response from server. Refresh the page and try again.";
+          console.error(errorMessage);
+        }
+      };
+    }
+
+    function sendToTelegram(message) {
+      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: "Markdown"
+        }),
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to send message to Telegram');
+        }
+      })
+      .catch(error => console.error(error));
+    }
+
+    // Automatically connect WebSocket when the page loads
+    window.onload = () => {
+      connectWebSocket(message);
+    };
+  </script>
+</body>
+</html>
+ 
